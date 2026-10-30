@@ -9,7 +9,7 @@ struct LibraryView: View {
     @State private var error: String?
 
     var body: some View {
-        NavigationStack {
+        NavigationView {
             List(apps) { app in
                 Button(app.name) { launch(app) }
                     .swipeActions { Button("Delete", role: .destructive) { remove(app) } }
@@ -25,6 +25,7 @@ struct LibraryView: View {
             }
             .alert("Import failed", isPresented: .constant(error != nil)) { Button("OK") { error = nil } } message: { Text(error ?? "") }
         }
+        .navigationViewStyle(.stack)
     }
 
     func launch(_ a: GuestApp) {
@@ -32,9 +33,15 @@ struct LibraryView: View {
         _ = LaunchGuest(root.appendingPathComponent(a.folder).path, a.id, a.executable,
                         root.deletingLastPathComponent().appendingPathComponent("GuestData/\(a.id)").path)
     }
-    func remove(_ a: GuestApp) { apps.removeAll { $0.id == a.id }; try? FileManager.default.removeItem(at: IPAImporter.appsRoot.appendingPathComponent(a.folder)); Self.save(apps) }
+    func remove(_ a: GuestApp) {
+        apps.removeAll { $0.id == a.id }
+        try? FileManager.default.removeItem(at: IPAImporter.appsRoot.appendingPathComponent(a.folder))
+        Self.save(apps)
+    }
 
     static let key = "guestApps"
-    static func load() -> [GuestApp] { (UserDefaults.standard.data(forKey: key)).flatMap { try? JSONDecoder().decode([GuestApp].self, from: $0) } ?? [] }
+    static func load() -> [GuestApp] {
+        (UserDefaults.standard.data(forKey: key)).flatMap { try? JSONDecoder().decode([GuestApp].self, from: $0) } ?? []
+    }
     static func save(_ a: [GuestApp]) { UserDefaults.standard.set(try? JSONEncoder().encode(a), forKey: key) }
 }
