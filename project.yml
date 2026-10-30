@@ -1,0 +1,32 @@
+name: IPAPlayer
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "15.0"
+packages:
+  ZIPFoundation:
+    url: https://github.com/weichsel/ZIPFoundation
+    from: 0.9.19
+targets:
+  IPAPlayer:
+    type: application
+    platform: iOS
+    sources: [Sources]
+    dependencies:
+      - package: ZIPFoundation
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: IPA Player
+        UILaunchScreen: {}
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.ipaplayer
+        SWIFT_OBJC_BRIDGING_HEADER: Sources/Bridging-Header.h
+        SWIFT_VERSION: "5.0"
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        CODE_SIGNING_ALLOWED: "NO"
+        CODE_SIGNING_REQUIRED: "NO"
