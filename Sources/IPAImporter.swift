@@ -1,5 +1,5 @@
 import Foundation
-import ZIPFoundation   // SPM: https://github.com/weichsel/ZIPFoundation
+import ZIPFoundation   // added automatically by the workflow's project spec
 
 struct GuestApp: Codable, Identifiable {
     let id: String          // CFBundleIdentifier
@@ -21,6 +21,7 @@ enum ImportError: LocalizedError {
 
 enum IPAImporter {
     static let fm = FileManager.default
+
     static var appsRoot: URL {
         let d = fm.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("Applications")
         try? fm.createDirectory(at: d, withIntermediateDirectories: true)
@@ -34,20 +35,21 @@ enum IPAImporter {
         try fm.unzipItem(at: ipa, to: tmp)
 
         let payload = tmp.appendingPathComponent("Payload")
-        guard let appDir = try fm.contentsOfDirectory(at: payload, includingPropertiesForKeys: nil)
-                .first(where: { $0.pathExtension == "app" }) else { throw ImportError.noApp }
-        guard let info = NSDictionary(contentsOf: appDir.appendingPathComponent("Info.plist")),
+        let contents = try fm.contentsOfDirectory(at: payload, includingPropertiesForKeys: nil)
+        guard let appDir = contents.first(where: { $0.pathExtension == "app" }) else { throw ImportError.noApp }
+
+        guard let info = NSDictionary(contentsOf: appDir.appendingPathComponent("Info.plist")) as? [String: Any],
               let bid = info["CFBundleIdentifier"] as? String,
               let exe = info["CFBundleExecutable"] as? String else { throw ImportError.badPlist }
 
         // Refuse encrypted binaries up front instead of crashing at launch.
         if MachOTool.isEncrypted(appDir.appendingPathComponent(exe).path) { throw ImportError.encrypted }
 
-        let name = (info["CFBundleDisplayName"] ?? info["CFBundleName"] ?? bid) as! String
+        let name = (info["CFBundleDisplayName"] as? String) ?? (info["CFBundleName"] as? String) ?? bid
         let dest = appsRoot.appendingPathComponent(bid + ".app")
         try? fm.removeItem(at: dest)
         try fm.moveItem(at: appDir, to: dest)
-        // Original signature is invalid inside the host; drop it (re-signing happens in Signer).
+        // The original signature is invalid inside the host; drop it.
         try? fm.removeItem(at: dest.appendingPathComponent("_CodeSignature"))
         return GuestApp(id: bid, name: name, executable: exe, folder: bid + ".app")
     }
