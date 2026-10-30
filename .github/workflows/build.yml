@@ -22,11 +22,20 @@ jobs:
 
       - name: Build (no signing)
         run: |
-          set -o pipefail
+          set +e
           xcodebuild -project IPAPlayer.xcodeproj -scheme IPAPlayer \
             -configuration Release -sdk iphoneos -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-            | tee build.log | tail -n 40
+            > build.log 2>&1
+          STATUS=$?
+          echo "xcodebuild exit code: $STATUS"
+          if [ $STATUS -ne 0 ]; then
+            echo "===== ERRORS ====="
+            grep -E "error:" build.log | sort -u | head -40
+            echo "===== LAST 40 LINES ====="
+            tail -n 40 build.log
+            exit $STATUS
+          fi
 
       - name: Package IPA
         run: |
